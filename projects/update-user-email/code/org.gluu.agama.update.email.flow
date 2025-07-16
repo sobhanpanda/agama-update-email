@@ -1,0 +1,106 @@
+Flow org.gluu.agama.update.email
+     Basepath ""
+     Timeout 500000 seconds
+//  Create  variable for UI feedback
+uiFeedback = {}
+uiFeedback.errorMessage = ""
+emailObj = {}
+sendMail = true
+uiInput = {matches: true, resent: false}
+Repeat 6 times max
+     //  Retrieve user profile  from UI
+     searchUserInput = RRF "searchUser.ftlh" uiFeedback
+     //  create an instance of Update service
+     emailUpdateService = Call org.gluu.agama.user.EmailUpdate#getInstance 
+     // when searchUserForm is submitted
+     When searchUserInput.formType is "searchUserForm"
+          // assign username to a variable
+          userName = searchUserInput.uid
+          // get user by username
+          userWithUid = Call emailUpdateService getUserEntityByUsername userName
+          // when user with provided username not found
+          When userWithUid.empty is true
+               // show error
+               uiFeedback.errorMessage = "User not registered with this UserName"
+          Otherwise
+               // Display update user page
+               userInput = RRF "updateUserEmail.ftlh" userWithUid
+               // when fields values are not entered
+               When userInput.empty is true
+                    // show error
+                    uiFeedback.errorMessage = "User input fields are empty"
+                    inum = userInput.inum
+               Otherwise
+                    email = userInput.mail
+                    inum = userWithUid.inum
+                    // Iterate x times max
+                    max = Repeat 3 times max
+                         // When send mail is allowed
+                         When sendMail is true
+                              // Tun off send mail
+                              sendMail = false
+                              // Call email service to send mail
+                              otpCode = Call emailUpdateService sendEmail email
+                              // Send Email Otp method called
+                              Log "@info Send Email Otp method called"
+                              // When OTP code null
+                              When otpCode is null
+                                   // Variable assignment for unsuccessful Email delivery
+                                   emailObj = { success: false, error: "Unable_to_deliver_email_message" }
+                                   // Finish flow unsuccessfully
+                                   Finish emailObj
+                              verified = false
+                              // Iterate x times max
+                              otpTries = Repeat 3 times max
+                                   // Variable assignment after successful email delivery
+                                   emailObj.email = email
+                                   emailObj.matches = uiInput.matches
+                                   emailObj.resent = uiInput.resent
+                                   // Redirect to page asking for OTP received using email
+                                   uiInput = RRF "emailOtp.ftlh" emailObj
+                                   // resent will false
+                                   uiInput.resent = false
+                                   // If user clicked on "resend code" button
+                                   When uiInput.resent is ""
+                                        // Variable assignment when user clicked on "resend code" button
+                                        sendMail = true
+                                        uiInput.resent = true
+                                        Log "@info Resend mail will trigger"
+                                   // When passcode entered by user matches
+                                   When uiInput.passcode is otpCode
+                                        verified = true
+                                        emailObj.success = true
+                                        // E-mail verification passed, initiating user provisioning flow
+                                        Log "@info E-mail verification passed, initiating user email update flow"
+                                        //  Check user already exist or not with username
+                                        userWithUid = Call emailUpdateService getUserEntityByInum inum
+                                        //  Call user registration service method to update a user
+                                        inum = Call emailUpdateService updateUser userInput
+                                        //  If user update success
+                                        When inum is not null
+                                             //  Show user updation log
+                                             Log "@info User % has been updated" inum
+                                             //  Show acknowledgement UI page for successful Update 
+                                             acknowledgementInput = RRF "acknowledgementEmail.ftlh" 
+                                             //  Finish the flow successfully
+                                             Log "@info Finish the flow successfully"
+                                             //  Finish the flow successfully
+                                             it_frnzt = {success:true, data: { userId: userName, email: email}}
+                                             Finish it_frnzt
+                                        Otherwise
+                                             //  User update failed log
+                                             Log "@info User update failed. Error : %" E
+                                             uiFeedback.errorMessage = "User update failed"
+                                   Otherwise
+                                        // Variable assigned when OTP entered by user does not matches
+                                        uiInput.matches = false
+                                        uiFeedback.errorMessage = "Incorrect OTP entered. Please try again."
+                    // Variable assignment when user exceeds the number of attempts allowed
+                    obj = { success: false, error: "ExceededTheNumberOfAttemptsAllowed" }
+                    // Finish flow when user exceeds maximum number of flows allowed
+                    Finish obj
+//  Maximum attempt reached
+Log "@info Maximum attempt reached"
+//  User Registration flow failed
+it_ksuag = {success:false, error: "User update flow reached max attempts try later"}
+Finish it_ksuag

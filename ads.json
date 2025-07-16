@@ -1,0 +1,23 @@
+{
+    "update-user-email": {
+        "projectName": "update-user-email",
+        "description": "Update User email ",
+        "type": "community",
+        "author": "AutomateCentroxy",
+        "version": "0.0.1",
+        "authorWebsite": "https://github.com/AutomateCentroxy/update_user_email",
+        "githubUri": "https://github.com/AutomateCentroxy/update_user_email",
+        "license": "apache-2.0",
+        "lastUpdated": "1752390038766",
+        "tags": [
+            "jans",
+            "authentication"
+        ],
+        "noDirectLaunch": [],
+        "configs": {
+            "org.gluu.agama.update.email": {},
+            "": {}
+        },
+        "name": "update-user-email"
+    }
+}
